@@ -330,6 +330,87 @@ Future<String> future = executor.submit(() -> {
 System.out.println(future.get());
 executor.shutdown();
 ```
+---
+
+## 📚 Parallel Stream nədir?
+
+Java 8 ilə gələn Stream API içində parallelStream() metodu, kolleksiya elementləri üzərində paralel işləmə (multithreading) imkanı verir.
+Normal stream() metodu elementləri sıralı (sequential) şəkildə icra edir.
+Amma parallelStream() bu task-ləri ForkJoinPool.commonPool() üzərində bir neçə thread ilə paralel icra edir.
+
+### 📌 İş prinsipi
+- Java Stream API, Spliterator istifadə edərək kolleksiyanı hissələrə bölür.
+- Hər hissə ForkJoinPool içində fərqli thread-lərdə işlənir.
+- Nəticədə daha sürətli emal mümkündür (xüsusilə böyük datalar üçün).
+
+### 📌 İstifadə Qaydası
+
+- Sequential Stream:
+```java
+list.stream()
+    .forEach(System.out::println);
+```
+
+- Parallel Stream:
+```java
+list.parallelStream()
+    .forEach(System.out::println);
+```
+
+### 📌 Üstünlükləri
+- ✅ Böyük dataset-lərdə daha sürətli nəticə.
+- ✅ Thread management etməyə ehtiyac yoxdur, Java özü idarə edir.
+- ✅ Kod daha oxunaqlı və funksional olur.
+
+### 📌 Risk və Dezavantajlar
+- ❌ Thread-safe olmayan obyektlərdə risklidir. (Concurrent modification exception və ya səhv nəticə ala bilərsən.)
+- ❌ Hər zaman sequential stream-dən sürətli olmur. (Küçük dataset-lərdə overhead daha çox ola bilər.)
+- ❌ Nəticələrin order-i zəmanətli deyil. (Əgər .forEachOrdered() istifadə etməsən)
+
+### 📌 Nümunə Kodlar
+- Sequential Stream:
+
+```java
+List<String> names = Arrays.asList("Elvin", "Aysel", "Kamran", "Leyla");
+
+names.stream()
+     .forEach(System.out::println);
+```
+
+- Parallel Stream:
+
+```java
+names.parallelStream()
+     .forEach(System.out::println);
+```
+
+- Parallel Stream + Map + Collect
+
+```java
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+
+List<Integer> result = numbers.parallelStream()
+    .map(n -> n * n)
+    .collect(Collectors.toList());
+
+System.out.println(result);
+```
+
+- Parallel Stream ilə Ordered Nəticə
+
+```java
+names.parallelStream()
+     .forEachOrdered(System.out::println);
+```
+
+### 📌 ParallelStream harada istifadə etməliyik?
+- ✅ Böyük və asinxron işlənməsi mümkün olan kolleksiyalarda.
+- ✅ Heavy computational əməliyyatlarda.
+- ✅ Thread-safe obyektlərlə işləyərkən.
+Yoxsa:
+- ❌ Kiçik dataset-lərdə
+- ❌ I/O-bound əməliyyatlarda
+- ❌ Mutable state-lərlə (və ya shared mutable data-larla) istifadə etmək risklidir.
 
 ---
 
@@ -371,23 +452,40 @@ executor.shutdown();
 - Runnable nəticə qaytarmır, exception atmır.
 - Callable nəticə qaytarır, exception ata bilir.
 
-### 🔹 2. ExecutorService nə işə yarayır?
+### 🔹 10. ExecutorService nə işə yarayır?
 - Thread-ləri idarə edən yüksək səviyyəli API-dir. Thread pool yaradır və task-ləri icra edir.
 
-### 🔹 3. Future nədir və nə işə yarayır?
+### 🔹 11. Future nədir və nə işə yarayır?
 - Callable task-lərinin nəticəsini gələcəkdə əldə etmək və task-ləri idarə etmək üçün istifadə olunur.
 
-### 🔹 4. Virtual Thread nədir?
+### 🔹 12. Virtual Thread nədir?
 - Java 19+ ilə gələn, yüngül, OS thread-lərindən asılı olmayan yeni thread növü.
 
-### 🔹 5. Runnable neçə üsulla istifadə olunur?
+### 🔹 13. Runnable neçə üsulla istifadə olunur?
 - Lambda expression ilə
 - Runnable implement edərək class yaratmaqla
 - Anonymous inner class ilə
 
-### 🔹 6. Callable neçə üsulla istifadə olunur?
+### 🔹 14. Callable neçə üsulla istifadə olunur?
 - Lambda expression ilə
 - Callable implement edərək class yaratmaqla
 - Anonymous inner class ilə
+
+### 🔹 15 ParallelStream və Stream fərqi nədir?
+- stream() sequential işləyir.
+- parallelStream() bir neçə thread-də eyni anda işləyir.
+
+### 🔹 16 ParallelStream hansı thread pool-u istifadə edir?
+- ForkJoinPool.commonPool()
+
+### 🔹 17 ParallelStream-də sıra qorunurmu?
+- Xeyr, forEach-də sıra zəmanətli deyil.
+- Amma forEachOrdered istifadə etsən qorunur.
+
+### 🔹 18 Hər zaman ParallelStream sürətli olurmu?
+- Xeyr. Böyük dataset-lər üçün sürətlidir, amma kiçik datalarda overhead ucbatından sequential daha performanslı ola bilər.
+
+### 🔹 19 Thread-safe olmayan obyektlərlə işləmək olarmı?
+- Olmaz. Concurrent modification və ya səhv nəticə ola bilər.
 
 ---
