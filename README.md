@@ -1190,3 +1190,447 @@ Bu sənəd Java-da thread və multithreading mövzularını tam əhatə edir. Ə
 
 5. **Thread pool ilə Virtual Thread-ləri müqayisə edin.**
    - **Cavab:** Thread pool məhdud sayda platform thread-lərindən ibarətdir və resurs istehlakı yüksəkdir. Virtual thread-lər isə thread pool-a ehtiyac olmadan minlərlə tapşırığı idarə edə bilər, çünki JVM tərəfindən optimallaşdırılmış planlaşdırma ilə işləyir. Virtual thread-lər `Executors.newVirtualThreadPerTaskExecutor()` ilə asanlıqla istifadə olunur.
+
+
+
+
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+
+
+# Java-da ScheduledExecutorService, ExecutorService və Executors: Dərin Bələdçi
+
+Bu sənəd Java-da **ExecutorService**, **ScheduledExecutorService** və **Executors** sinfinin detallı izahını, onların fərqlərini və **Executors** sinfinin bütün metodlarının istifadə məqsədlərini əhatə edir. Hər bir mexanizm, onun funksionallığı və praktiki tətbiqləri açıqlanır.
+
+---
+
+## 1. ExecutorService Nədir?
+
+**ExecutorService** Java-nın `java.util.concurrent` paketində yerləşən bir interfeysdir və thread-lərin idarə edilməsini asanlaşdırmaq üçün istifadə olunur. Thread-ləri birbaşa yaratmaq və idarə etmək əvəzinə, **ExecutorService** thread hovuzlarını (thread pools) idarə edir, tapşırıqların asinxron icrasını təmin edir və resursları optimallaşdırır.
+
+### ExecutorService-in Xüsusiyyətləri
+- **Thread Hovuzları**: Məhdud sayda thread-ləri təkrar istifadə edərək context switching xərclərini azaldır.
+- **Asinxron İcra**: Tapşırıqlar (`Runnable` və ya `Callable`) asinxron şəkildə icra olunur.
+- **Nəticə İdarəetməsi**: `Future` obyektləri vasitəsilə tapşırıq nəticələri alınır.
+- **Tapşırıq İdarəetməsi**: Tapşırıqları ləğv etmək, gözləmək və ya statuslarını yoxlamaq mümkündür.
+- **Bağlanma**: `shutdown()` və `shutdownNow()` ilə hovuz idarə olunur.
+
+### Əsas Metodlar
+- `submit(Runnable task)`: `Runnable` tapşırığı icra edir, `Future<?>` qaytarır.
+- `submit(Callable<T> task)`: `Callable` tapşırığı icra edir, `Future<T>` qaytarır.
+- `execute(Runnable task)`: `Runnable` tapşırığı icra edir, nəticə qaytarmır.
+- `shutdown()`: Yeni tapşırıq qəbulunu dayandırır, lakin mövcud tapşırıqlar tamamlanır.
+- `shutdownNow()`: Bütün tapşırıqları ləğv etməyə çalışır və hovuzu bağlayır.
+- `awaitTermination(long timeout, TimeUnit unit)`: Hovuzun bağlanmasını gözləyir.
+- `invokeAll(Collection<? extends Callable<T>> tasks)`: Bütün tapşırıqları icra edir və nəticələri `List<Future<T>>` kimi qaytarır.
+- `invokeAny(Collection<? extends Callable<T>> tasks)`: İlk tamamlanan tapşırığın nəticəsini qaytarır.
+
+### Nümunə
+```java
+import java.util.concurrent.*;
+public class ExecutorServiceExample {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        Future<String> future = executor.submit(() -> "Task tamamlandı");
+        System.out.println(future.get()); // "Task tamamlandı"
+        executor.shutdown();
+    }
+}
+```
+
+---
+
+## 2. ScheduledExecutorService Nədir?
+
+**ScheduledExecutorService** `ExecutorService` interfeysindən miras alan bir interfeysdir və tapşırıqların planlaşdırılmış (scheduled) və ya müəyyən aralıqlarla icrasını təmin edir. Bu, xüsusilə vaxta bağlı tapşırıqlar (məsələn, timer və ya periodik işlər) üçün nəzərdə tutulub.
+
+### ScheduledExecutorService-in Xüsusiyyətləri
+- **Planlaşdırılmış İcra**: Tapşırıqları müəyyən gecikmə ilə və ya periodik olaraq icra edir.
+- **Təkrarlanan Tapşırıqlar**: Sabit interval və ya sabit gecikmə ilə tapşırıqları təkrarlayır.
+- **Thread Hovuzu**: Məhdud sayda thread-lərlə işləyir.
+- **Asinxronluq**: `Future` ilə nəticələri idarə edir.
+
+### Əsas Metodlar
+- `schedule(Runnable task, long delay, TimeUnit unit)`: Tapşırığı bir dəfə, müəyyən gecikmə ilə icra edir.
+- `schedule(Callable<V> task, long delay, TimeUnit unit)`: Nəticə qaytaran tapşırığı bir dəfə icra edir.
+- `scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit)`: Tapşırığı sabit intervalda təkrarlayır.
+- `scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit)`: Tapşırıq tamamlandıqdan sonra müəyyən gecikmə ilə təkrarlayır.
+
+### Nümunə
+```java
+import java.util.concurrent.*;
+public class ScheduledExecutorServiceExample {
+    public static void main(String[] args) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+        scheduler.schedule(() -> System.out.println("5 saniyə sonra icra"), 5, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(() -> System.out.println("Hər 2 saniyədən bir"), 0, 2, TimeUnit.SECONDS);
+        scheduler.schedule(() -> scheduler.shutdown(), 10, TimeUnit.SECONDS);
+    }
+}
+```
+
+---
+
+## 3. ScheduledExecutorService ilə ExecutorService Arasındakı Fərqlər
+
+| Xüsusiyyət                     | ExecutorService                          | ScheduledExecutorService                  |
+|-------------------------------|------------------------------------------|------------------------------------------|
+| **İnterfeys**                 | `java.util.concurrent.ExecutorService`   | `ExecutorService`-dən miras alır         |
+| **İcra Növü**                 | Asinxron tapşırıq icrası                | Planlaşdırılmış və periodik icra         |
+| **Planlaşdırma**              | Yoxdur                                  | Gecikmə və periodik icra dəstəklənir     |
+| **Metodlar**                  | `submit()`, `execute()`, `invokeAll()`   | `schedule()`, `scheduleAtFixedRate()`    |
+| **İstifadə Sahəsi**           | Ümumi tapşırıq icrası                   | Timer, periodik tapşırıqlar              |
+| **Thread Hovuzu**             | Müxtəlif hovuz növləri                  | Adətən sabit ölçülü hovuz                |
+
+### Əsas Fərqlər
+- **Planlaşdırma**: `ScheduledExecutorService` tapşırıqların vaxta bağlı icrasını dəstəkləyir, `ExecutorService` isə sadəcə asinxron icra təmin edir.
+- **Periodik Tapşırıqlar**: `ScheduledExecutorService` `scheduleAtFixedRate()` və `scheduleWithFixedDelay()` ilə təkrarlanan tapşırıqları dəstəkləyir.
+- **İstifadə Ssenariləri**:
+  - `ExecutorService`: Veb sorğularının emalı, paralel hesablamalar.
+  - `ScheduledExecutorService`: Planlaşdırılmış işlər (məsələn, log yoxlaması, verilənlər bazası sinxronizasiyası).
+
+---
+
+## 4. Executors Sinfi və Metodları
+
+**Executors** sinfi `java.util.concurrent` paketində yerləşən statik köməkçi sinfdir və `ExecutorService` və `ScheduledExecutorService` obyektlərinin yaradılmasını asanlaşdırır. Aşağıda **Executors** sinfinin bütün metodları və onların məqsədləri təsvir olunur.
+
+### Executors Sinfinin Metodları
+
+#### 4.1. ExecutorService Yaradan Metodlar
+1. **`newFixedThreadPool(int nThreads)`**
+   - **Təsvir**: Sabit ölçülü thread hovuzu yaradır (nThreads sayda thread).
+   - **İstifadə**: CPU-intensive tapşırıqlarda, məhdud sayda thread ilə işləmək üçün.
+   - **Nümunə**:
+     ```java
+     ExecutorService executor = Executors.newFixedThreadPool(4);
+     executor.submit(() -> System.out.println("Task icra olunur"));
+     executor.shutdown();
+     ```
+   - **Xüsusiyyət**: Thread-lər təkrar istifadə olunur, yeni tapşırıqlar üçün gözləmə sırası yaradılır.
+
+2. **`newCachedThreadPool()`**
+   - **Təsvir**: Ehtiyaca uyğun olaraq thread-lər yaradan və təkrar istifadə edən hovuz.
+   - **İstifadə**: Qısa müddətli, çoxsaylı asinxron tapşırıqlarda.
+   - **Nümunə**:
+     ```java
+     ExecutorService executor = Executors.newCachedThreadPool();
+     executor.submit(() -> System.out.println("Task icra olunur"));
+     executor.shutdown();
+     ```
+   - **Xüsusiyyət**: 60 saniyə istifadə olunmayan thread-lər silinir, ehtiyac olduqda yeni thread yaradılır.
+
+3. **`newSingleThreadExecutor()`**
+   - **Təsvir**: Tək thread ilə işləyən hovuz yaradır.
+   - **İstifadə**: Tapşırıqların ardıcıl icra edilməsi tələb olunduqda.
+   - **Nümunə**:
+     ```java
+     ExecutorService executor = Executors.newSingleThreadExecutor();
+     executor.submit(() -> System.out.println("Task icra olunur"));
+     executor.shutdown();
+     ```
+   - **Xüsusiyyət**: Tapşırıqlar FIFO (First-In-First-Out) sırası ilə icra olunur.
+
+4. **`newWorkStealingPool()`**
+   - **Təsvir**: Fork/Join çərçivəsi ilə işləyən paralel hovuz yaradır (Java 8+).
+   - **İstifadə**: Rekursiv, paralel tapşırıqlarda (məsələn, divide-and-conquer alqoritmləri).
+   - **Nümunə**:
+     ```java
+     ExecutorService executor = Executors.newWorkStealingPool();
+     executor.submit(() -> System.out.println("Paralel task"));
+     executor.shutdown();
+     ```
+   - **Xüsusiyyət**: Hər thread öz iş sırasına malikdir, başqa thread-lərin işlərini "oğurlaya" bilər.
+
+5. **`newVirtualThreadPerTaskExecutor()`** (Java 19+)
+   - **Təsvir**: Hər tapşırıq üçün virtual thread yaradan executor.
+   - **İstifadə**: I/O-intensive tapşırıqlarda yüksək konkurrentlik üçün.
+   - **Nümunə**:
+     ```java
+     ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+     executor.submit(() -> System.out.println("Virtual thread task"));
+     executor.shutdown();
+     ```
+   - **Xüsusiyyət**: Minlərlə virtual thread dəstəkləyir, yüngül və miqyaslıdır.
+
+#### 4.2. ScheduledExecutorService Yaradan Metodlar
+6. **`newScheduledThreadPool(int corePoolSize)`**
+   - **Təsvir**: Sabit ölçülü thread hovuzu ilə planlaşdırılmış tapşırıqlar üçün executor yaradır.
+   - **İstifadə**: Periodik və ya gecikmə ilə icra olunan tapşırıqlarda.
+   - **Nümunə**:
+     ```java
+     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+     scheduler.schedule(() -> System.out.println("Planlaşdırılmış task"), 5, TimeUnit.SECONDS);
+     scheduler.shutdown();
+     ```
+   - **Xüsusiyyət**: Thread-lər təkrar istifadə olunur, planlaşdırma dəstəklənir.
+
+7. **`newSingleThreadScheduledExecutor()`**
+   - **Təsvir**: Tək thread ilə planlaşdırılmış tapşırıqlar üçün executor yaradır.
+   - **İstifadə**: Ardıcıl planlaşdırılmış tapşırıqlarda.
+   - **Nümunə**:
+     ```java
+     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+     scheduler.scheduleAtFixedRate(() -> System.out.println("Hər 2 saniyədən bir"), 0, 2, TimeUnit.SECONDS);
+     scheduler.shutdown();
+     ```
+   - **Xüsusiyyət**: Tapşırıqlar ardıcıl icra olunur.
+
+#### 4.3. Digər Köməkçi Metodlar
+8. **`callable(Runnable task)`**
+   - **Təsvir**: `Runnable` tapşırığını `Callable`-a çevirir (nəticə qaytarmır, `null` qaytarır).
+   - **İstifadə**: `Runnable` tapşırıqlarını `Future` ilə istifadə etmək üçün.
+   - **Nümunə**:
+     ```java
+     Callable<Object> callable = Executors.callable(() -> System.out.println("Runnable task"));
+     ```
+
+9. **`callable(Runnable task, T result)`**
+   - **Təsvir**: `Runnable` tapşırığını `Callable`-a çevirir və müəyyən nəticə qaytarır.
+   - **İstifadə**: Xüsusi nəticə qaytarılmalı olduqda.
+   - **Nümunə**:
+     ```java
+     Callable<String> callable = Executors.callable(() -> System.out.println("Task"), "Tamamlandı");
+     ```
+
+10. **`defaultExecutor()`**
+    - **Təsvir**: Sistemdə default executor qaytarır (adətən virtual thread-lər üçün).
+    - **İstifadə**: Virtual thread-lərlə sadə icra üçün.
+    - **Nümunə**:
+      ```java
+      ExecutorService executor = Executors.defaultExecutor();
+      executor.submit(() -> System.out.println("Default executor task"));
+      ```
+
+11. **`unconfigurableExecutorService(ExecutorService executor)`**
+    - **Təsvir**: Mövcud `ExecutorService`-i konfiqurasiya edilə bilməyən formada qaytarır.
+    - **İstifadə**: Executor-un parametrlərinin dəyişdirilməsinin qarşısını almaq üçün.
+    - **Nümunə**:
+      ```java
+      ExecutorService unconfigurable = Executors.unconfigurableExecutorService(Executors.newFixedThreadPool(2));
+      ```
+
+12. **`unconfigurableScheduledExecutorService(ScheduledExecutorService executor)`**
+    - **Təsvir**: Mövcud `ScheduledExecutorService`-i konfiqurasiya edilə bilməyən formada qaytarır.
+    - **İstifadə**: Scheduler-in parametrlərinin dəyişdirilməsinin qarşısını almaq üçün.
+    - **Nümunə**:
+      ```java
+      ScheduledExecutorService unconfigurable = Executors.unconfigurableScheduledExecutorService(Executors.newScheduledThreadPool(2));
+      ```
+
+---
+
+## 5. Praktiki Nümunə: Bilet Rezervasiya Sistemi
+
+Aşağıda **ScheduledExecutorService** və **ExecutorService** istifadə edərək real-time bilet rezervasiya sistemi göstərilir. Sistem race condition-lardan qorunur, sinxronizasiya mexanizmləri istifadə edir və 30 saniyəlik rezervasiya müddətini idarə edir.
+
+```java
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.*;
+
+public class TicketReservationSystem {
+    private final int totalTickets;
+    private final AtomicInteger availableTickets;
+    private final Map<Integer, Reservation> reservations;
+    private final ReentrantLock lock;
+    private final ScheduledExecutorService scheduler;
+    private final Semaphore paymentSemaphore;
+    private final Random random;
+
+    private static class Reservation {
+        final int userId;
+        final int ticketId;
+        final long reservationTime;
+        volatile boolean isPaid;
+
+        Reservation(int userId, int ticketId, long reservationTime) {
+            this.userId = userId;
+            this.ticketId = ticketId;
+            this.reservationTime = reservationTime;
+            this.isPaid = false;
+        }
+    }
+
+    public TicketReservationSystem(int totalTickets) {
+        this.totalTickets = totalTickets;
+        this.availableTickets = new AtomicInteger(totalTickets);
+        this.reservations = new ConcurrentHashMap<>();
+        this.lock = new ReentrantLock();
+        this.scheduler = Executors.newScheduledThreadPool(4);
+        this.paymentSemaphore = new Semaphore(10);
+        this.random = new Random();
+    }
+
+    public boolean reserveTicket(int userId) throws InterruptedException {
+        lock.lock();
+        try {
+            while (availableTickets.get() == 0 && reservations.size() >= totalTickets) {
+                System.out.printf("User %d: Bilet yoxdur, gözləyir...%n", userId);
+                return false;
+            }
+
+            if (availableTickets.get() > 0) {
+                int ticketId = totalTickets - availableTickets.decrementAndGet();
+                Reservation reservation = new Reservation(userId, ticketId, System.currentTimeMillis());
+                reservations.put(ticketId, reservation);
+                System.out.printf("User %d: Bilet %d rezerv edildi%n", userId, ticketId);
+                scheduler.schedule(() -> checkReservationTimeout(reservation), 30, TimeUnit.SECONDS);
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void checkReservationTimeout(Reservation reservation) {
+        lock.lock();
+        try {
+            if (!reservation.isPaid) {
+                reservations.remove(reservation.ticketId);
+                availableTickets.incrementAndGet();
+                System.out.printf("User %d: Bilet %d ödəniş vaxtı bitdi, ləğv edildi%n", 
+                    reservation.userId, reservation.ticketId);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Callable<Boolean> processPayment(int userId, int ticketId) {
+        return () -> {
+            if (!paymentSemaphore.tryAcquire(5, TimeUnit.SECONDS)) {
+                System.out.printf("User %d: Ödəniş sistemi məşğuldur%n", userId);
+                return false;
+            }
+
+            try {
+                Reservation reservation = reservations.get(ticketId);
+                if (reservation == null || reservation.userId != userId || reservation.isPaid) {
+                    return false;
+                }
+
+                Thread.sleep(random.nextInt(2000) + 1000);
+                lock.lock();
+                try {
+                    if (reservations.containsKey(ticketId)) {
+                        reservation.isPaid = true;
+                        System.out.printf("User %d: Bilet %d ödənildi%n", userId, ticketId);
+                        return true;
+                    }
+                    return false;
+                } finally {
+                    lock.unlock();
+                }
+            } finally {
+                paymentSemaphore.release();
+            }
+        };
+    }
+
+    public void shutdown() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        final int TOTAL_TICKETS = 20;
+        final int TOTAL_USERS = 50;
+        TicketReservationSystem system = new TicketReservationSystem(TOTAL_TICKETS);
+
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        List<Future<Boolean>> futures = new ArrayList<>();
+        for (int userId = 1; userId <= TOTAL_USERS; userId++) {
+            final int currentUserId = userId;
+            if (system.reserveTicket(currentUserId)) {
+                int behavior = new Random().nextInt(3);
+                if (behavior == 0) {
+                    System.out.printf("User %d: Ödəniş etmədi%n", currentUserId);
+                } else if (behavior == 1) {
+                    Thread.sleep(35000);
+                    futures.add(executor.submit(system.processPayment(currentUserId, TOTAL_TICKETS - system.availableTickets.get() - 1)));
+                } else {
+                    Thread.sleep(new Random().nextInt(10000));
+                    futures.add(executor.submit(system.processPayment(currentUserId, TOTAL_TICKETS - system.availableTickets.get() - 1)));
+                }
+            }
+        }
+
+        for (Future<Boolean> future : futures) {
+            try {
+                Boolean result = future.get(10, TimeUnit.SECONDS);
+                System.out.printf("Ödəniş nəticəsi: %s%n", result);
+            } catch (TimeoutException e) {
+                System.out.println("Ödəniş vaxtı bitdi");
+            }
+        }
+
+        executor.shutdown();
+        system.shutdown();
+        System.out.println("Simulyasiya tamamlandı. Qalan bilet: " + system.availableTickets.get());
+    }
+}
+```
+
+### Sistem Xüsusiyyətləri
+- **Race Condition Qorunması**: `ReentrantLock` və `AtomicInteger` ilə.
+- **Thread Koordinasiyası**: `Semaphore` ilə ödəniş resursları məhdudlaşdırılır.
+- **Zaman İdarəetməsi**: `ScheduledExecutorService` ilə 30 saniyəlik rezervasiya müddəti.
+- **Asinxron Nəticələr**: `Future` ilə ödəniş nəticələri idarə olunur.
+
+---
+
+## 6. Intervyu Sualları və Cavablar
+
+### Sual 1: ExecutorService ilə ScheduledExecutorService arasındakı fərq nədir?
+**Cavab**: `ExecutorService` asinxron tapşırıq icrası üçün ümumi interfeysdir, `ScheduledExecutorService` isə planlaşdırılmış və periodik tapşırıqları dəstəkləyir. `ScheduledExecutorService` `schedule()`, `scheduleAtFixedRate()` və `scheduleWithFixedDelay()` metodlarını təmin edir.
+
+### Sual 2: Executors.newFixedThreadPool ilə newCachedThreadPool arasındakı fərq nədir?
+**Cavab**: `newFixedThreadPool` sabit sayda thread-lərlə işləyir və tapşırıqlar sıraya alınır. `newCachedThreadPool` ehtiyaca uyğun thread yaradır və istifadə olunmayan thread-ləri 60 saniyədən sonra silir. `FixedThreadPool` CPU-intensive, `CachedThreadPool` isə qısa müddətli tapşırıqlarda üstündür.
+
+### Sual 3: ScheduledExecutorService-də scheduleAtFixedRate ilə scheduleWithFixedDelay arasındakı fərq nədir?
+**Cavab**: `scheduleAtFixedRate` sabit intervalda (məsələn, hər 2 saniyədən bir) tapşırığı icra edir, tapşırığın icra müddətindən asılı olmayaraq. `scheduleWithFixedDelay` tapşırığın tamamlanmasından sonra müəyyən gecikmə ilə təkrarlayır.
+
+### Sual 4: Executors.newVirtualThreadPerTaskExecutor nə üçün istifadə olunur?
+**Cavab**: I/O-intensive tapşırıqlarda yüksək konkurrentlik təmin etmək üçün istifadə olunur. Hər tapşırıq üçün virtual thread yaradır, çox az yaddaş istifadə edir və minlərlə tapşırığı dəstəkləyir.
+
+### Sual 5: ExecutorService-i necə düzgün bağlamaq olar?
+**Cavab**: `shutdown()` yeni tapşırıq qəbulunu dayandırır, lakin mövcud tapşırıqlar tamamlanır. `shutdownNow()` bütün tapşırıqları ləğv etməyə çalışır. `awaitTermination()` ilə bağlanmanın tamamlanması gözlənilir.
+
+---
+
+## 7. Tövsiyələr
+- **ExecutorService**:
+  - CPU-intensive tapşırıqlarda `newFixedThreadPool` istifadə edin.
+  - Qısa müddətli tapşırıqlarda `newCachedThreadPool` seçin.
+  - Ardıcıl icra üçün `newSingleThreadExecutor` istifadə edin.
+- **ScheduledExecutorService**:
+  - Planlaşdırılmış tapşırıqlar üçün `newScheduledThreadPool` istifadə edin.
+  - Periodik tapşırıqlarda `scheduleAtFixedRate` və ya `scheduleWithFixedDelay` seçin.
+- **Virtual Thread-lər**:
+  - I/O-intensive tapşırıqlarda `newVirtualThreadPerTaskExecutor` istifadə edin.
+- **Resurs İdarəetməsi**:
+  - Həmişə `shutdown()` çağıraraq hovuzu bağlayın.
+  - `Future` ilə nəticələri idarə edin, ləğv etmək üçün `cancel()` istifadə edin.
+- **Intervyuya Hazırlıq**:
+  - **Executors** metodlarının fərqlərini və istifadə ssenarilərini öyrənin.
+  - Planlaşdırma mexanizmlərini (`scheduleAtFixedRate` vs `scheduleWithFixedDelay`) izah edin.
+  - Virtual thread-lərin üstünlüklərini vurğulayın.
+
+Bu sənəd Java-da `ExecutorService`, `ScheduledExecutorService` və `Executors` sinfinin tam təsvirini əhatə edir. Əlavə suallarınız varsa, əlaqə saxlayın!
