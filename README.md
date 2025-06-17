@@ -716,6 +716,477 @@ Virtual thread-lər `Thread` sinfindəki bütün metodları dəstəkləyir (`sta
 
 4. **Virtual Thread-lərin platform thread-lərindən hansı məhdudiyyətləri var?**
    - **Cavab:** Virtual thread-lər CPU-intensiv tapşırıqlarda platform thread-ləri qədər effektiv olmaya bilər. Həmçinin, köhnə sinxron API-lər və ya kitabxanalar virtual thread-lərlə tam uyğun olmaya bilər, çünki onların planlaşdırılması JVM-ə bağlıdır.
+  
+
+---
+---
+---
+---
+---
+---
+---
+---
+---
+
+# Java-da Thread, Multithreading və Virtual Thread-lər: Dərin Bələdçi
+
+Bu sənəd Java-da **thread**, **multithreading** və **virtual thread** anlayışlarını dərindən izah edir. Hər bir termin, mexanizm, problem və həll yolu detallı şəkildə təsvir olunur. Həmçinin, praktiki nümunələr, intervyu sualları və real-world tətbiqləri əhatə edilir.
+
+## 1. Thread Nədir?
+
+**Thread** (iş parçası) bir proqramın icra olunan ən kiçik vahididir. Java-da hər proqram ən azı bir thread ilə işləyir (adətən `main` thread). Thread-lər eyni proses daxilində paralel olaraq icra oluna bilər və resursları (yaddaş, fayl deskriptorları və s.) paylaşır.
+
+### Thread-in Xüsusiyyətləri
+- **Özəl Stack Yaddaşı**: Hər thread-in öz stack yaddaşı var ki, burada local dəyişənlər və metod çağırışları saxlanılır.
+- **Paylaşılan Heap**: Thread-lər eyni prosesin heap yaddaşını paylaşır, bu da obyektlərin və statik dəyişənlərin hamı üçün əlçatan olması deməkdir.
+- **Paralel İcra**: Çoxnüvəli CPU-larda thread-lər fərqli nüvələrdə işləyərək performansı artırır.
+
+### Java-da Thread Yaradılması
+Java-da thread yaratmağın iki əsas yolu var:
+1. **Thread Siniini Miras Almaq**:
+   ```java
+   class MyThread extends Thread {
+       @Override
+       public void run() {
+           System.out.println("Thread işləyir: " + Thread.currentThread().getName());
+       }
+   }
+   public class Main {
+       public static void main(String[] args) {
+           MyThread thread = new MyThread();
+           thread.start();
+       }
+   }
+   ```
+2. **Runnable İnterfeysini İmplement Etmək**:
+   ```java
+   class MyRunnable implements Runnable {
+       @Override
+       public void run() {
+           System.out.println("Runnable işləyir: " + Thread.currentThread().getName());
+       }
+   }
+   public class Main {
+       public static void main(String[] args) {
+           Thread thread = new Thread(new MyRunnable());
+           thread.start();
+       }
+   }
+   ```
+
+### `start()` vs `run()`
+- **`start()`**: Yeni bir thread yaradır və `run()` metodunu icra edir. JVM tərəfindən idarə olunur.
+- **`run()`**: Sadəcə metodun icrasını cari thread-də yerinə yetirir, yeni thread yaratmır.
+
+### Thread-in Həyat Dövrü
+Java-da thread-in 6 vəziyyəti var:
+1. **NEW**: Thread yaradılıb, amma `start()` çağırılmayıb.
+2. **RUNNABLE**: Thread icra olunur və ya icra üçün hazırdır.
+3. **BLOCKED**: Thread kilid gözləyir (məsələn, `synchronized` bloku).
+4. **WAITING**: Thread `wait()`, `join()` və ya `LockSupport.park()` ilə gözləyir.
+5. **TIMED_WAITING**: `Thread.sleep()`, `wait(timeout)` və ya `join(timeout)` ilə müəyyən müddət gözləyir.
+6. **TERMINATED**: Thread icrasını bitirib.
+
+**Diaqram**:
+```
+NEW → RUNNABLE ↔ BLOCKED/WAITING/TIMED_WAITING → TERMINATED
+```
+
+## 2. Multithreading Nədir?
+
+**Multithreading** bir proses daxilində birdən çox thread-in eyni anda (və ya görünüşdə eyni anda) icra olunmasıdır. Java-da multithreading performansı artırmaq, resurslardan səmərəli istifadə etmək və tətbiqləri daha responsiv etmək üçün istifadə olunur.
+
+### Multithreading-in Üstünlükləri
+- **Paralel İcra**: Çoxnüvəli CPU-larda tapşırıqlar bölüşdürülərək daha sürətli icra olunur.
+- **Resurs Paylaşımı**: Thread-lər eyni yaddaşı paylaşır, bu da yaddaş səmərəliliyini artırır.
+- **Responsivlik**: UI tətbiqlərində (məsələn, JavaFX) uzunmüddətli əməliyyatlar ayrı thread-lərdə icra olunaraq interfeysin donmasının qarşısı alınır.
+- **Modulyarlıq**: Tapşırıqlar müstəqil thread-lərə bölünərək kodun idarə olunması asanlaşır.
+
+### Multithreading-in Çətinlikləri
+1. **Race Condition**: Bir neçə thread eyni resursa eyni anda daxil olduqda gözlənilməz nəticələr yaranır.
+2. **Deadlock**: Thread-lər bir-birini gözləyərək kilidlənə bilər.
+3. **Starvation**: Bəzi thread-lər resurslara çata bilməyərək icra olunmur.
+4. **Thread Interference**: Thread-lər eyni dəyişəni dəyişdirərkən məlumatın korlanması.
+5. **Performans Xərcləri**: Çoxlu thread-lərin idarə edilməsi (context switching) CPU resurslarını istehlak edir.
+
+### Race Condition
+**Tərif**: Bir neçə thread-in eyni resursa nəzarətsiz daxil olması nəticəsində məlumatın korlanması.
+**Nümunə**:
+```java
+class Counter {
+    private int count = 0;
+    public void increment() {
+        count++; // Oxu, artır, yaz - atomik deyil
+    }
+}
+```
+Bu kodda iki thread eyni anda `count`-u dəyişdirərsə, nəticə yanlış ola bilər.
+
+**Qarşısının Alınması**:
+1. **synchronized**:
+   ```java
+   public synchronized void increment() {
+       count++;
+   }
+   ```
+2. **ReentrantLock**:
+   ```java
+   import java.util.concurrent.locks.ReentrantLock;
+   class Counter {
+       private final ReentrantLock lock = new ReentrantLock();
+       private int count = 0;
+       public void increment() {
+           lock.lock();
+           try {
+               count++;
+           } finally {
+               lock.unlock();
+           }
+       }
+   }
+   ```
+3. **AtomicInteger**:
+   ```java
+   import java.util.concurrent.atomic.AtomicInteger;
+   class Counter {
+       private AtomicInteger count = new AtomicInteger(0);
+       public void increment() {
+           count.incrementAndGet();
+       }
+   }
+   ```
+
+### Deadlock
+**Tərif**: İki və ya daha çox thread-in bir-birini gözləməsi nəticəsində kilidlənməsi.
+**Nümunə**:
+```java
+public class DeadlockExample {
+    public static void main(String[] args) {
+        String resource1 = "Resurs 1";
+        String resource2 = "Resurs 2";
+        Thread t1 = new Thread(() -> {
+            synchronized (resource1) {
+                System.out.println("T1: Resurs 1 kilidləndi");
+                try { Thread.sleep(100); } catch (Exception e) {}
+                synchronized (resource2) {
+                    System.out.println("T1: Resurs 2 kilidləndi");
+                }
+            }
+        });
+        Thread t2 = new Thread(() -> {
+            synchronized (resource2) {
+                System.out.println("T2: Resurs 2 kilidləndi");
+                try { Thread.sleep(100); } catch (Exception e) {}
+                synchronized (resource1) {
+                    System.out.println("T2: Resurs 1 kilidləndi");
+                }
+            }
+        });
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+**Qarşısının Alınması**:
+1. **Resurs Sıralaması**: Resurslara həmişə eyni ardıcıllıqla daxil olun.
+2. **Timeout**: `ReentrantLock` ilə `tryLock(timeout)` istifadə edin.
+3. **Aşkarlama**: JConsole, VisualVM və ya `ThreadMXBean` ilə deadlock-ları monitor edin.
+
+### Thread Sinxronizasiya Mexanizmləri
+1. **synchronized**:
+   - Obyektə və ya sinfə kilid qoyur.
+   - Sadədir, lakin çevik deyil.
+2. **ReentrantLock**:
+   - Daha çevikdir: `tryLock()`, `lockInterruptibly()`, `Condition` dəstəyi.
+   - Ədalətli kilidləmə (fairness) təmin edə bilər.
+3. **Condition**:
+   - `ReentrantLock` ilə işləyir, şərtə bağlı gözləmə və oyanma təmin edir.
+   ```java
+   Condition condition = lock.newCondition();
+   condition.await(); // Gözlə
+   condition.signal(); // Oyat
+   ```
+4. **Semaphore**:
+   - Resurslara girişi məhdudlaşdırır.
+   ```java
+   import java.util.concurrent.Semaphore;
+   Semaphore semaphore = new Semaphore(10);
+   semaphore.acquire();
+   semaphore.release();
+   ```
+5. **Atomic Dəyişənlər**:
+   - `AtomicInteger`, `AtomicReference` kimi siniflər lock olmadan atomik əməliyyatlar təmin edir.
+6. **ExecutorService**:
+   - Thread hovuzlarını idarə edir.
+   ```java
+   import java.util.concurrent.ExecutorService;
+   import java.util.concurrent.Executors;
+   ExecutorService executor = Executors.newFixedThreadPool(4);
+   executor.submit(() -> System.out.println("Task icra olunur"));
+   executor.shutdown();
+   ```
+
+## 3. Virtual Thread-lər (Project Loom)
+
+Java 19-da təqdim olunan **virtual thread-lər** (JEP 425) yüksək miqyaslı konkurrent tətbiqlər üçün nəzərdə tutulmuş yüngül thread-lərdir. Ənənəvi platform thread-lərindən (OS thread-ləri) fərqli olaraq, virtual thread-lər JVM tərəfindən idarə olunur.
+
+### Virtual Thread-lərin Xüsusiyyətləri
+- **Yüngül**: Hər virtual thread çox az yaddaş (~1KB) istifadə edir, platform thread-ləri isə ~1MB/stack tələb edir.
+- **Miqyaslılıq**: Minlərlə və ya milyonlarla virtual thread yaratmaq mümkündür.
+- **Bloklama Əməliyyatları**: I/O əməliyyatlarında (fayl oxuma, şəbəkə sorğuları) virtual thread avtomatik dayandırılır və bərpa olunur.
+- **Thread Hovuzuna Ehtiyac Yoxdur**: Virtual thread-lər ənənəvi thread hovuzlarını əvəz edir.
+
+### Virtual Thread-lərin Yaradılması
+```java
+public class VirtualThreadExample {
+    public static void main(String[] args) {
+        Thread virtualThread = Thread.ofVirtual().start(() -> {
+            System.out.println("Virtual thread işləyir: " + Thread.currentThread());
+        });
+    }
+}
+```
+
+### Virtual Thread-lər ilə ExecutorService
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+public class VirtualThreadExecutor {
+    public static void main(String[] args) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < 1000; i++) {
+                executor.submit(() -> {
+                    System.out.println("Task icra olunur: " + Thread.currentThread());
+                });
+            }
+        }
+    }
+}
+```
+
+### Virtual Thread-lər Nə Vaxt İstifadə Olunur?
+- **I/O-intensive Tapşırıqlar**: Fayl oxuma/yazma, şəbəkə əməliyyatları.
+- **Yüksək Konkurrentlik**: Veb serverlər, mikroxidmətlər kimi sistemlər.
+- **Sadəlik**: Sinxronizasiya və thread hovuzlarının idarə edilməsindən azad edir.
+
+### Virtual Thread vs Platform Thread
+| Xüsusiyyət              | Platform Thread         | Virtual Thread          |
+|-------------------------|-------------------------|-------------------------|
+| Yaratma Xərci           | Yüksək (OS thread-i)    | Aşağı (JVM idarə edir)  |
+| Yaddaş İstehlakı        | Böyük (~1MB/stack)      | Kiçik (~1KB/stack)      |
+| Miqyaslılıq             | Məhdud (~bir neçə min)  | Yüksək (~milyonlarca)   |
+| Bloklama                | OS səviyyəsində         | JVM tərəfindən idarə    |
+| İstifadə Sahəsi         | CPU-intensive           | I/O-intensive           |
+
+## 4. Thread-lərlə İşləyərkən Problemlər və Həllər
+
+### 4.1. Thread Interference
+**Tərif**: Thread-lər eyni dəyişəni eyni anda dəyişdirərkən məlumatın korlanması.
+**Həll**:
+- `synchronized` və ya `ReentrantLock` ilə kilidləmə.
+- `Atomic` siniflərdən istifadə.
+- Thread-safe kolleksiyalar (`ConcurrentHashMap`, `CopyOnWriteArrayList`).
+
+### 4.2. Starvation
+**Tərif**: Bəzi thread-lərin resurslara çata bilməməsi.
+**Həll**:
+- `ReentrantLock` ilə ədalətli kilidləmə (`new ReentrantLock(true)`).
+- Thread prioritetlərini ehtiyatla istifadə edin.
+
+### 4.3. Livelock
+**Tərif**: Thread-lər bir-birinə yol verməyə çalışarkən irəliləyə bilməməsi.
+**Həll**:
+- Təsadüfi gözləmə müddətləri əlavə edin.
+- Resurs sıralamasından istifadə edin.
+
+## 5. Praktiki Nümunə: Bilet Rezervasiya Sistemi
+
+Aşağıda virtual thread-lərlə real-time bilet rezervasiya sistemi göstərilir. Sistem race condition-lardan qorunur, sinxronizasiya mexanizmləri istifadə edir və 30 saniyəlik rezervasiya müddətini idarə edir.
+
+```java
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.*;
+
+public class VirtualTicketReservationSystem {
+    private final int totalTickets;
+    private final AtomicInteger availableTickets;
+    private final Map<Integer, Reservation> reservations;
+    private final ReentrantLock lock;
+    private final ScheduledExecutorService scheduler;
+    private final Semaphore paymentSemaphore;
+    private final Random random;
+
+    private static class Reservation {
+        final int userId;
+        final int ticketId;
+        final long reservationTime;
+        volatile boolean isPaid;
+
+        Reservation(int userId, int ticketId, long reservationTime) {
+            this.userId = userId;
+            this.ticketId = ticketId;
+            this.reservationTime = reservationTime;
+            this.isPaid = false;
+        }
+    }
+
+    public VirtualTicketReservationSystem(int totalTickets) {
+        this.totalTickets = totalTickets;
+        this.availableTickets = new AtomicInteger(totalTickets);
+        this.reservations = new ConcurrentHashMap<>();
+        this.lock = new ReentrantLock();
+        this.scheduler = Executors.newScheduledThreadPool(4);
+        this.paymentSemaphore = new Semaphore(10);
+        this.random = new Random();
+    }
+
+    public boolean reserveTicket(int userId) throws InterruptedException {
+        lock.lock();
+        try {
+            while (availableTickets.get() == 0 && reservations.size() >= totalTickets) {
+                System.out.printf("User %d: Bilet yoxdur, gözləyir...%n", userId);
+                return false;
+            }
+
+            if (availableTickets.get() > 0) {
+                int ticketId = totalTickets - availableTickets.decrementAndGet();
+                Reservation reservation = new Reservation(userId, ticketId, System.currentTimeMillis());
+                reservations.put(ticketId, reservation);
+                System.out.printf("User %d: Bilet %d rezerv edildi%n", userId, ticketId);
+                scheduler.schedule(() -> checkReservationTimeout(reservation), 30, TimeUnit.SECONDS);
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void checkReservationTimeout(Reservation reservation) {
+        lock.lock();
+        try {
+            if (!reservation.isPaid) {
+                reservations.remove(reservation.ticketId);
+                availableTickets.incrementAndGet();
+                System.out.printf("User %d: Bilet %d ödəniş vaxtı bitdi, ləğv edildi%n", 
+                    reservation.userId, reservation.ticketId);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean processPayment(int userId, int ticketId) throws InterruptedException {
+        if (!paymentSemaphore.tryAcquire(5, TimeUnit.SECONDS)) {
+            System.out.printf("User %d: Ödəniş sistemi məşğuldur%n", userId);
+            return false;
+        }
+
+        try {
+            Reservation reservation = reservations.get(ticketId);
+            if (reservation == null || reservation.userId != userId || reservation.isPaid) {
+                return false;
+            }
+
+            Thread.sleep(random.nextInt(2000) + 1000);
+            lock.lock();
+            try {
+                if (reservations.containsKey(ticketId)) {
+                    reservation.isPaid = true;
+                    System.out.printf("User %d: Bilet %d ödənildi%n", userId, ticketId);
+                    return true;
+                }
+                return false;
+            } finally {
+                lock.unlock();
+            }
+        } finally {
+            paymentSemaphore.release();
+        }
+    }
+
+    public void shutdown() {
+        scheduler.shutdown();
+    }
+
+    public static void main(String[] args) {
+        final int TOTAL_TICKETS = 20;
+        final int TOTAL_USERS = 50;
+        VirtualTicketReservationSystem system = new VirtualTicketReservationSystem(TOTAL_TICKETS);
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int userId = 1; userId <= TOTAL_USERS; userId++) {
+                final int currentUserId = userId;
+                executor.submit(() -> {
+                    try {
+                        if (system.reserveTicket(currentUserId)) {
+                            int behavior = new Random().nextInt(3);
+                            if (behavior == 0) {
+                                System.out.printf("User %d: Ödəniş etmədi%n", currentUserId);
+                            } else if (behavior == 1) {
+                                Thread.sleep(35000);
+                                system.processPayment(currentUserId, TOTAL_TICKETS - system.availableTickets.get() - 1);
+                            } else {
+                                Thread.sleep(new Random().nextInt(10000));
+                                system.processPayment(currentUserId, TOTAL_TICKETS - system.availableTickets.get() - 1);
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            }
+        }
+
+        system.shutdown();
+        System.out.println("Simulyasiya tamamlandı. Qalan bilet: " + system.availableTickets.get());
+    }
+}
+```
+
+### Sistem Xüsusiyyətləri
+- **Race Condition Qorunması**: `ReentrantLock` və `AtomicInteger` ilə.
+- **Thread Koordinasiyası**: `Condition` və `Semaphore` ilə resurs girişi idarə olunur.
+- **Zaman İdarəetməsi**: `ScheduledExecutorService` ilə 30 saniyəlik rezervasiya müddəti.
+- **Miqyaslılıq**: Virtual thread-lər minlərlə istifadəçini dəstəkləyir.
+
+## 6. Intervyu Sualları və Cavablar
+
+### Sual 1: Thread ilə Runnable arasındakı fərq nədir?
+**Cavab**: `Thread` sinfdir və birbaşa thread yaradır. `Runnable` interfeysdir və yalnız icra ediləcək kodu təyin edir. `Runnable` daha çevikdir, çünki sinf başqa sinfi miras ala bilər və thread hovuzları ilə uyğundur.
+
+### Sual 2: Virtual thread-lər nədir və nə üçün istifadə olunur?
+**Cavab**: Virtual thread-lər JVM tərəfindən idarə olunan yüngül thread-lərdir. I/O-intensive tapşırıqlarda yüksək konkurrentlik təmin edir, çox az yaddaş istifadə edir və bloklama əməliyyatlarında avtomatik idarə olunur.
+
+### Sual 3: Race condition nədir və necə qarşısını almaq olar?
+**Cavab**: Race condition bir neçə thread-in eyni resursa nəzarətsiz daxil olmasıdır. Qarşısını almaq üçün:
+- `synchronized` və ya `ReentrantLock` istifadə edin.
+- `Atomic` siniflərdən istifadə edin.
+- Thread-safe kolleksiyalar seçin.
+
+### Sual 4: Deadlock nədir və necə aşkar edilir?
+**Cavab**: Deadlock thread-lərin bir-birini gözləməsi nəticəsində kilidlənməsidir. Aşkar etmək üçün JConsole, VisualVM və ya `ThreadMXBean` istifadə olunur. Qarşısını almaq üçün resurs sıralaması və timeout tətbiq edin.
+
+### Sual 5: `synchronized` ilə `ReentrantLock` arasındakı fərq nədir?
+**Cavab**: `synchronized` daxili kilidləmədir, sadədir, lakin çevik deyil. `ReentrantLock` `tryLock()`, `Condition` və ədalətli kilidləmə kimi əlavə funksionallıq təklif edir.
+
+## 7. Tövsiyələr
+- **Thread-lərdə**:
+  - Sinxronizasiyaya diqqət edin.
+  - Deadlock və race condition-lardan qaçın.
+  - Resurs istehlakını optimallaşdırın.
+- **Virtual Thread-lərdə**:
+  - I/O-intensive tapşırıqlarda istifadə edin.
+  - `newVirtualThreadPerTaskExecutor()` ilə miqyaslı sistemlər qurun.
+- **Intervyuya Hazırlıq**:
+  - Sinxronizasiya mexanizmlərini dərindən öyrənin.
+  - Deadlock və race condition nümunələri ilə praktiki həllər təklif edin.
+  - Virtual thread-lərin üstünlüklərini izah edin.
+
+Bu sənəd Java-da thread və multithreading mövzularını tam əhatə edir. Əlavə suallarınız varsa, əlaqə saxlayın!
 
 5. **Thread pool ilə Virtual Thread-ləri müqayisə edin.**
    - **Cavab:** Thread pool məhdud sayda platform thread-lərindən ibarətdir və resurs istehlakı yüksəkdir. Virtual thread-lər isə thread pool-a ehtiyac olmadan minlərlə tapşırığı idarə edə bilər, çünki JVM tərəfindən optimallaşdırılmış planlaşdırma ilə işləyir. Virtual thread-lər `Executors.newVirtualThreadPerTaskExecutor()` ilə asanlıqla istifadə olunur.
