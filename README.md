@@ -1634,3 +1634,331 @@ public class TicketReservationSystem {
   - Virtual thread-lərin üstünlüklərini vurğulayın.
 
 Bu sənəd Java-da `ExecutorService`, `ScheduledExecutorService` və `Executors` sinfinin tam təsvirini əhatə edir. Əlavə suallarınız varsa, əlaqə saxlayın!
+
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+
+# 🧠 Sual 1:
+Java-da Thread sinfi və Runnable interfeysi arasındakı fərq nədir? Hansı hallarda biri digərinə üstünlük verilə bilər?
+
+## 🎯 Fərqlər və hansını seçmək:
+
+| `Thread` extend etmək                                                   | `Runnable` implement etmək                             |
+| ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| Sadəcə bir sinfi extend edə bilərsən                                    | Başqa bir sinfi extend edərkən də istifadə oluna bilər |
+| Daha sadə görünür, amma daha az elastikdir                              | Daha çevik və OOP prinsiplərinə uyğundur               |
+| Mirası artıq istifadə etdiyinə görə başqa sinifdən extend edə bilməzsən | İstədiyin qədər interfeys implement edə bilərsən       |
+
+
+## ✅ Nəticə:
+Əgər əlavə olaraq başqa bir sinifdən də extend etməlisənsə və daha çevik struktur qurmaq istəyirsənsə, `Runnable` interfeysindən istifadə etmək tövsiyə olunur. Real layihələrdə adətən `Runnable` və ya `Callable` ilə işlənilir.
+
+# 🧠 Sual 3:
+synchronized blokun bəzi çatışmazlıqları var. Daha elastik və performanslı alternativ olaraq Java-da ReentrantLock istifadə olunur.
+
+**Sual:**
+ReentrantLock nədir və synchronized ilə müqayisədə hansı üstünlükləri və fərqləri var?
+
+## 🔄 synchronized ilə ReentrantLock arasında əsas fərqlər:
+
+| Xüsusiyyət                                     | `synchronized`                | `ReentrantLock`                              |
+| ---------------------------------------------- | ----------------------------- | -------------------------------------------- |
+| Kilid alıb-buraxma                             | Avtomatik                     | Manual (`lock()` / `unlock()`)               |
+| Try-lock etmək (zaman təyin etməklə)           | Mümkün deyil                  | Mümkündür: `tryLock()` və `tryLock(timeout)` |
+| Interrupt (kəsmə) dəstəyi                      | Yoxdur                        | Var: `lockInterruptibly()`                   |
+| Fairness (ədalətli sıra)                       | Yoxdur                        | Var: `new ReentrantLock(true)`               |
+| Condition obyektləri (wait/notify alternativi) | Yalnız `wait()` və `notify()` | `Condition` interfeysi ilə daha çox imkan    |
+
+
+# 🧠 Sual 4:
+Java-da Condition nədir? ReentrantLock ilə birlikdə necə istifadə olunur və hansı hallarda wait() / notify() əvəzinə Condition seçilər?
+
+## ✅ Cavab:
+**🔎 `Condition` nədir?**
+Java-da `Condition`, `ReentrantLock` ilə birlikdə istifadə olunan bir interfeysdir. Bu, `synchronized`-də istifadə etdiyimiz `wait()`, `notify()` və `notifyAll()`-a alternativ olaraq yaradılıb.
+
+**`Condition` nə verir bizə?**
+Daha çevik və aydın gözləmə bildiriş sistemi.
+
+Bir obyekt üzərində bir neçə fərqli gözləmə növü yarada bilərik (bu, `wait()` ilə mümkün deyil).
+
+`await()` → `wait()`, `signal()` → `notify()`, `signalAll()` → `notifyAll()`-ın qarşılığıdır.
+
+## 🎯 Nə vaxt Condition istifadə edək?
+
+- Bir obyekt üzərində birdən çox növ gözləmə varsa (məsələn `notFull`, `notEmpty` kimi).
+- Daha kompleks sinxronizasiya tələb olunan hallarda.
+- `synchronized` və `wait`/`notify` ilə kod çox qarışıq görünürsə.
+
+
+# 🧠 Sual 5:
+Java-da deadlock nədir? Necə baş verir və necə qarşısı alınır?
+
+## ✅ Cavab:
+**🔒 Deadlock nədir?**
+Deadlock, iki və ya daha çox thread-in bir-birinin tutduğu resursa əldə etməyə çalışarkən bir-birini sonsuz gözləməsi halıdır. Nəticədə heç bir thread işi tamamlayıb çıxış edə bilmir.
+
+## 🚫 Deadlock-un qarşısını necə almaq olar?
+
+1. Lock alma sırasını standartlaşdırmaq (lock ordering):
+Bütün thread-lər kilidləri eyni sırada almalıdır:
+
+```java
+synchronized (Lock1) {
+    synchronized (Lock2) {
+        // Do something
+    }
+}
+```
+
+2. tryLock() ilə vaxt təyin etmək:
+ReentrantLock istifadə edərək əgər kilid alınmazsa alternativ addımlar atmaq mümkündür.
+```java
+if (lock1.tryLock(100, TimeUnit.MILLISECONDS)) {
+    // attempt lock2...
+}
+```
+
+3. Timeout mexanizmi və rollback (əgər alınmırsa, çıx və təkrar yoxla):
+4. Thread-lərin prioritetinə görə kilidləmə siyasəti yazmaq: (advanced mövzu)
+
+# 🧠 Sual 6:
+Java-da volatile açar sözü nə üçündür? synchronized ilə fərqi nədir?
+
+## ✅ Cavab:
+**🔍 volatile nədir?**
+volatile açar sözü bir dəyişənin bütün thread-lər üçün hər zaman əsas (main) yaddaşdan oxunmasını və yazılmasını təmin edir. Yəni thread-lərin keşlənmiş (cached) dəyişənlər üzərində işləməsinin qarşısını alır.
+
+Əgər bu volatile olmasa, bəzi thread-lər running == false dəyişimini görməyə bilər və sonsuz işləyə bilər.
+
+## 🔄 volatile və synchronized fərqi:
+
+| Xüsusiyyət                                                              | `volatile`               | `synchronized`                      |
+| ----------------------------------------------------------------------- | ------------------------ | ----------------------------------- |
+| **Thread-lər arasında görünürlük (visibility)**                         | ✅ Var                    | ✅ Var                               |
+| **Mutual exclusion (kritik bölməyə yalnız bir thread daxil ola bilər)** | ❌ Yox                    | ✅ Var                               |
+| **Blok və ya metod səviyyəsində istifadə**                              | ❌ Yalnız dəyişənlər üçün | ✅ Blok/metod                        |
+| **Performans**                                                          | Daha yüngül              | Daha ağır (monitor lock tələb edir) |
+
+
+# 🧠 Sual 7:
+Java-da `ThreadPool` nədir? Niyə hər dəfə yeni thread yaratmaq yerinə `ExecutorService` istifadə edirik?
+
+## ✅ Cavab:
+**🔄 Thread Pool nədir?**
+Thread pool – əvvəlcədən yaradılmış thread-lər toplusudur (yəni bir hovuzdur). Yeni bir iş (task) gəldikdə, sistem hər dəfə yeni thread yaratmaq əvəzinə bu hovuzdakı mövcud thread-lərdən birini istifadə edir. Bu, performans və resurs idarəsi baxımından daha effektivdir.
+
+## ⚙️ ExecutorService nədir?
+ExecutorService, Java-da thread pool-ların idarəsini təmin edən bir interfeysdir. Ən çox istifadə olunan implementasiyası:
+
+- `Executors.newFixedThreadPool(int n)`
+- `Executors.newCachedThreadPool()`
+- `Executors.newSingleThreadExecutor()`
+
+## Misal
+
+```java
+import java.util.concurrent.*;
+
+public class MyApp {
+    public static void main(String[] args) {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+
+        for (int i = 1; i <= 5; i++) {
+            int taskID = i;
+            executor.submit(() -> {
+                System.out.println("Running task " + taskID + " by " + Thread.currentThread().getName());
+            });
+        }
+
+        executor.shutdown(); // Artıq task qəbul etməsin
+    }
+}
+```
+
+## 🎯 Niyə ExecutorService istifadə edirik?
+
+| Problem                                             | ExecutorService ilə Həll                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Hər dəfə `new Thread()` yaratmaq resurs israfıdır   | Mövcud thread-ləri təkrar istifadə edir                                      |
+| Thread-ləri idarə etmək çətindir                    | Task scheduling, timeout, future kimi imkanlar verir                         |
+| Manual thread shutdown, exception handling çətindir | `shutdown()`, `invokeAll()`, `submit()` kimi metodlar ilə rahat idarə olunur |
+
+
+## ✅ Əlavə:
+ExecutorService ilə birlikdə Future, Callable, ScheduledExecutorService kimi daha inkişaf etmiş imkanlar da gəlir. Bu da onu enterprise səviyyə sistemlər üçün əvəzolunmaz edir.
+
+# 🧠 Sual 8:
+`Runnable` və `Callable` interfeysləri arasındakı fərq nədir? `ExecutorService.submit()` bu ikisini necə fərqli idarə edir?
+
+## ✅ Cavab:
+**🔄 `Runnable` və Callable arasındakı əsas fərqlər:**
+
+| Xüsusiyyət                      | `Runnable`                       | `Callable<V>`                                          |
+| ------------------------------- | -------------------------------- | ------------------------------------------------------ |
+| Geri dönüş dəyəri               | **Yoxdur** (`void`)              | **Var** (`V` tipi, məsələn `Integer`, `String`, və s.) |
+| Exception ata bilir?            | **Checked exception ata bilməz** | **Checked exception ata bilər**                        |
+| `submit()` metodu ilə istifadə  | ✅                                | ✅                                                      |
+| `execute()` metodu ilə istifadə | ✅                                | ❌ (yalnız `Runnable` qəbul edir)                       |
+
+## Misal
+
+```java
+ExecutorService executor = Executors.newFixedThreadPool(2);
+
+// Runnable ilə
+Runnable runnableTask = () -> System.out.println("Runnable task");
+executor.execute(runnableTask); // Geri dönüş yoxdur
+
+// Callable ilə
+Callable<String> callableTask = () -> {
+    Thread.sleep(500);
+    return "Callable task result";
+};
+
+Future<String> future = executor.submit(callableTask); // Geri dönüş var
+
+try {
+    String result = future.get(); // Gözləyir və nəticəni alır
+    System.out.println("Result: " + result);
+} catch (InterruptedException | ExecutionException e) {
+    e.printStackTrace();
+}
+```
+
+## 🛠 submit() və execute() fərqi:
+
+| Metod                       | Açıklama                                                                   |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `execute(Runnable)`         | Sadəcə `Runnable` qəbul edir, nəticə qaytarmır                             |
+| `submit(Runnable/Callable)` | Həm `Runnable`, həm `Callable` qəbul edir, **`Future` obyektini** qaytarır |
+
+
+## ✅ Future:
+`submit()` metodu icra olunduqda Future qaytarır
+
+**`Future` vasitəsilə:**
+
+- task nəticəsini əldə edə bilərsən → `get()`
+- task-ın bitib-bitmədiyini yoxlaya bilərsən → `isDone()`
+- task-ı ləğv edə bilərsən → `cancel()`
+
+
+## 📌 Runnable vs Callable vs Future fərqləri:
+
+| Xüsusiyyət           | **Runnable**                            | **Callable**                                         | **Future**                                         |
+| :------------------- | :-------------------------------------- | :--------------------------------------------------- | :------------------------------------------------- |
+| **Java versiyası**   | Java 1.0                                | Java 5.0                                             | Java 5.0                                           |
+| **Return (nəticə)**  | Heç nə qaytarmır (void)                 | Nəticə qaytarır (`call()` metodu ilə)                | Task nəticəsini və statusunu saxlayır              |
+| **Exception**        | Yalnız `RuntimeException` ata bilər     | İstənilən exception ata bilər (`throws`)             | `get()` çağıranda exception ata bilər              |
+| **Method**           | `void run()`                            | `V call() throws Exception`                          | `get()`, `cancel()`, `isDone()`, `isCancelled()`   |
+| **ExecutorService**  | `execute()` və `submit()` ilə işləyir   | Yalnız `submit()` ilə işləyir                        | `submit()` çağıranda qaytarılır                    |
+| **İstifadə məqsədi** | Paralel task icrası, nəticə lazım deyil | Paralel task icrası, nəticə və ya exception lazımdır | Task-ın nəticəsini və icra vəziyyətini idarə etmək |
+
+
+# 🧠 Sual 9:
+Future interfeysi nə üçündür? future.get() necə işləyir və hansı hallarda problem yarada bilər?
+
+## ✅ Cavab:
+**🔍 Future nədir?**
+`Future` — Java-da `Callable` və `Runnable`task-ların nəticəsini gələcəkdə əldə etmək, həmçinin task-ın tamamlanıb-tamamlanmadığını yoxlamaq və idarə etmək üçün istifadə olunan bir interfeysdir.
+
+## 🔑 Əsas metodlar:
+
+| Metod                                   | Açıklama                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------- |
+| `get()`                                 | Task nəticəsini qaytarır. Task hələ tamamlanmayıbsa, **bloklanır və gözləyir.** |
+| `isDone()`                              | Task tamamlanıb ya yox – `true/false`                                           |
+| `isCancelled()`                         | Task ləğv edilibmi?                                                             |
+| `cancel(boolean mayInterruptIfRunning)` | Task-ı dayandırmağa çalışır                                                     |
+
+## ⚠️ future.get() nəyə səbəb ola bilər?
+1. **Bloklama (blocking):**
+- Əgər task hələ tamamlanmayıbsa, `get()` metodu onu gözləyəcək və bu, performans problemlərinə və ya "`hang`" halına səbəb ola bilər.
+
+2. **Exception atması:**
+
+- `InterruptedException`: Əgər gözləmə zamanı thread interrupt olarsa.
+- `ExecutionException`: Əgər task içində exception baş veribsə.
+- `CancellationException`: Əgər task ləğv edilibsə.
+
+# 🧠 Sual 10:
+Java-da `CompletableFuture` nədir? `Future` ilə fərqi nədir və hansı üstünlükləri var?
+
+## ✅ Cavab:
+**🔎 CompletableFuture nədir?**
+`CompletableFuture` — Java 8 ilə gələn, asenkron (asynchronous) və event-driven (hadisə əsaslı) proqramlaşdırmanı çox daha rahat və güclü idarə etməyə imkan verən bir classdır. O, `Future`-in inkişaf etmiş versiyasıdır.
+
+## 🎯 Future və CompletableFuture fərqi:
+
+| Xüsusiyyət                                        | `Future`                                               | `CompletableFuture`                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Asenkron əməliyyatlar                             | Var, amma çox məhduddur (sadəcə `get()` ilə bloklanma) | Daha çevik və zəngin API (chaining, callback, composition)                                        |
+| Callback dəstəyi                                  | Yoxdur, nəticəni almaq üçün bloklanmaq lazımdır        | Bəli, `thenApply()`, `thenAccept()`, `thenCompose()` və s. ilə callback-lər əlavə etmək mümkündür |
+| Composition (birləşdirmə)                         | Çətin, dəstəyi yoxdur                                  | Sadə, `thenCombine()`, `allOf()`, `anyOf()` ilə çoxlu task-ları idarə etmək olur                  |
+| Exception handling                                | Məhdud, `get()` zamanı exception gəlir                 | Güclü, `exceptionally()`, `handle()` kimi metodlar mövcuddur                                      |
+| Asenkron taskları idarə etmək üçün geniş imkanlar | Yox                                                    | Bəli                                                                                              |
+
+## 🔑 Üstünlükləri:
+
+- Asenkron taskları daha rahat bir-birinə bağlı şəkildə işləməyə imkan verir.
+- Callback və chaining dəstəyi ilə kod daha oxunaqlı və idarəolunan olur.
+- Asenkron exception-ların idarəsi daha rahatdır.
+- Çoxlu asenkron əməliyyatları bir yerdə idarə etmək üçün zəngin metodlar var.
+
+---
+---
+---
+
+# 📌 Parametrelerin Anlamı:
+
+| Parametre                       | Açıklama                                                                                                                                                                                                       |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maximum-pool-size`             | Havuza maksimum kaç bağlantı oluşturabileceğini belirler. Örn: 30 tane aynı anda açık bağlantı.                                                                                                                |
+| `minimum-idle`                  | Havuza her zaman hazır olarak tutulacak minimum bağlantı sayısı. Sistem bağlantı kullanmasa bile en az 10 bağlantı açık tutulur.                                                                               |
+| `connection-timeout` (ms)       | Bir bağlantı talebinin karşılanması için beklenecek maksimum süre (milisaniye). Süre dolarsa **SQLException** fırlatır.                                                                                        |
+| `idle-timeout` (ms)             | Kullanılmayan (boşta kalan) bir bağlantının havuzdan kaldırılması için beklenen süre. 5 dakika (300000 ms) boşta kalan bağlantı kapanır.                                                                       |
+| `max-lifetime` (ms)             | Bir bağlantının havuzda en fazla ne kadar süre aktif kalabileceğini belirler. Bağlantı bu süre dolunca kapatılır ve yenisi açılır. Genelde veritabanı tarafında session timeout’la uyumlu tutulur.             |
+| `leak-detection-threshold` (ms) | **Bağlantı sızıntısı (connection leak)** tespiti için kullanılır. Eğer bir bağlantı açılıp belirtilen süreden uzun süre kapatılmazsa log’a warning düşer. Böylece açık kalıp unutulan bağlantılar bulunabilir. |
+
+
+---
+---
+---
+
+# 📌 Java Thread class-ının əsas metodları və nə iş gördüyü
+
+| Metod                   | Nə edir?                                                                        | İzah və İstifadə                                                    |
+| :---------------------- | :------------------------------------------------------------------------------ | :------------------------------------------------------------------ |
+| `start()`               | Thread-i işə salır. Yeni thread yaradıb, `run()` metodunu çağırır               | `new` vəziyyətindən `Runnable` vəziyyətinə keçir                    |
+| `run()`                 | Thread-in işini görən kod. Özün override edirsən                                | `start()` bunu çağırır, birbaşa çağırmaq olmaz                      |
+| `join()`                | İstifadəçi thread-in bitməsini gözləyir                                         | Bloklayır, həmin thread bitənə kimi gözləyir                        |
+| `sleep(millis)`         | Thread-i müəyyən müddətlik yatızdırır (bloklayır)                               | `InterruptedException` ata bilər                                    |
+| `yield()`               | Hal-hazırda işləyən thread-i scheduler-ə verir, digər thread-ə növbə verə bilər | Zəmanətli növbə vermə deyil                                         |
+| `interrupt()`           | Thread-i dayandırmaq üçün interrupt siqnalı göndərir                            | `sleep()` və ya `wait()` içində olarsa, `InterruptedException` atır |
+| `isAlive()`             | Thread hələ aktivdirmi deyə yoxlayır                                            | `true` və ya `false` qaytarır                                       |
+| `setPriority(int)`      | Thread-in icra prioritetini təyin edir                                          | 1–10 arası qiymət (default 5)                                       |
+| `getPriority()`         | Thread-in prioritetini qaytarır                                                 | int dəyəri qaytarır                                                 |
+| `currentThread()`       | Hal-hazırda işləyən thread-i qaytarır                                           | Statik metoddur                                                     |
+| `getName()`             | Thread-in adını alır                                                            | String qaytarır                                                     |
+| `setName(String)`       | Thread-ə ad verir                                                               | Sadəcə etiket kimi                                                  |
+| `getState()`            | Thread-in hal-hazırkı vəziyyətini qaytarır                                      | `NEW`, `RUNNABLE`, `WAITING`, `BLOCKED` və s.                       |
+| `wait()`                | Thread-i başqa thread-dən `notify()` gələnə qədər gözlədər                      | `synchronized` blok daxilində olmalıdır                             |
+| `notify()`              | `wait()`-də gözləyən bir thread-i oyadır                                        | `synchronized` blokda olmalıdır                                     |
+| `notifyAll()`           | Bütün `wait()`-də gözləyən thread-ləri oyadır                                   | `synchronized` blokda olmalıdır                                     |
+| `stop()` *(deprecated)* | Thread-i zorla dayandırır                                                       | İstifadəsi məsləhət deyil, təhlükəlidir                             |
+
